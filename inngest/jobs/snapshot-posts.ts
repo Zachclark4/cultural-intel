@@ -1,8 +1,13 @@
 import { inngest } from '../client'
 import { requireDb } from '@/lib/db/supabase'
 
-const YT_API_KEY = process.env.YOUTUBE_API_KEY
-const BASE_YT = 'https://www.googleapis.com/youtube/v3'
+const YT_API_KEY      = process.env.YOUTUBE_API_KEY
+const RAPIDAPI_KEY    = process.env.RAPIDAPI_KEY
+const TIKTOK_HOST     = 'tiktok-scraper7.p.rapidapi.com'
+const BASE_YT         = 'https://www.googleapis.com/youtube/v3'
+
+// Snapshot 75 TikTok posts per run (every 6h = 300/day across the most recent posts)
+const TIKTOK_BATCH = 75
 
 async function fetchYTStats(ids: string[]): Promise<Map<string, { views: number; likes: number; comments: number }>> {
   const url = new URL(`${BASE_YT}/videos`)
@@ -19,6 +24,23 @@ async function fetchYTStats(ids: string[]): Promise<Map<string, { views: number;
       comments: parseInt(v.statistics.commentCount ?? '0'),
     }])
   )
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function fetchTikTokStats(videoId: string): Promise<Record<string, any> | null> {
+  if (!RAPIDAPI_KEY) return null
+  try {
+    const url = new URL(`https://${TIKTOK_HOST}/video/info`)
+    url.searchParams.set('video_id', videoId)
+    const res = await fetch(url.toString(), {
+      headers: { 'x-rapidapi-key': RAPIDAPI_KEY, 'x-rapidapi-host': TIKTOK_HOST },
+      cache: 'no-store',
+    })
+    if (!res.ok) return null
+    const json = await res.json()
+    // Response is either flat or nested under data
+    return json?.data ?? (json?.code === 0 ? null : json) ?? null
+  } catch { return null }
 }
 
 export const snapshotPosts = inngest.createFunction(
@@ -43,6 +65,7 @@ export const snapshotPosts = inngest.createFunction(
       }>
     })
 
+    // ── YouTube ───────────────────────────────────────────────────────────────
     const ytPosts = posts.filter(p => p.platform === 'youtube')
 
     const ytSnapshotted = await step.run('snapshot-youtube', async () => {
@@ -57,7 +80,7 @@ export const snapshotPosts = inngest.createFunction(
         for (const post of ytPosts.filter(p => chunk.includes(p.platform_post_id.replace('yt-', '')))) {
           const rawId = post.platform_post_id.replace('yt-', '')
           const stats = statsMap.get(rawId)
-          if (!stats) continue
+          if (!stats || stats.views === 0) continue
           const followers = post.creators?.follower_count ?? 0
           await db.from('post_snapshots').insert({
             post_id: post.id, views: stats.views, likes: stats.likes,
@@ -69,7 +92,40 @@ export const snapshotPosts = inngest.createFunction(
       return count
     })
 
-    logger.info(`Snapshot — YT: ${ytSnapshotted}, TikTok snapshotted at ingest time`)
-    return { youtube: ytSnapshotted }
+    // ── TikTok ────────────────────────────────────────────────────────────────
+    // Re-fetch live stats for the most recent TikTok posts so velocity is real
+    // (delta between this snapshot and the one written at ingest time).
+    const tiktokPosts = posts.filter(p => p.platform === 'tiktok').slice(0, TIKTOK_BATCH)
+
+    const tiktokSnapshotted = await step.run('snapshot-tiktok', async () => {
+      if (!RAPIDAPI_KEY || tiktokPosts.length === 0) return 0
+
+      const results = await Promise.all(
+        tiktokPosts.map(async post => {
+          const videoId = post.platform_post_id.replace('tt-', '')
+          const v = await fetchTikTokStats(videoId)
+          if (!v) return null
+          const views    = v.play_count    ?? v.statistics?.play_count    ?? 0
+          const likes    = v.digg_count    ?? v.statistics?.digg_count    ?? 0
+          const comments = v.comment_count ?? v.statistics?.comment_count ?? 0
+          const shares   = v.share_count   ?? v.statistics?.share_count   ?? 0
+          const saves    = v.collect_count ?? v.statistics?.collect_count ?? 0
+          if (views === 0) return null
+          return {
+            post_id: post.id, views, likes, comments, shares, saves,
+            creator_followers_at_capture: post.creators?.follower_count ?? 0,
+          }
+        })
+      )
+
+      const valid = results.filter(Boolean) as NonNullable<typeof results[number]>[]
+      if (valid.length === 0) return 0
+
+      await db.from('post_snapshots').insert(valid)
+      return valid.length
+    })
+
+    logger.info(`Snapshot — YT: ${ytSnapshotted}, TikTok: ${tiktokSnapshotted}`)
+    return { youtube: ytSnapshotted, tiktok: tiktokSnapshotted }
   }
 )
