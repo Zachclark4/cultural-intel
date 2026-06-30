@@ -122,6 +122,9 @@ export const useAppStore = create<AppState>()(
 
       activeNav: 'feed',
       setActiveNav: (nav) => set({ activeNav: nav }),
+
+      viewMode: 'grid',
+      setViewMode: (viewMode) => set({ viewMode }),
     }),
     {
       name: 'cultural-intel-store',

@@ -1,12 +1,14 @@
 'use client'
 
 import { useAppStore } from '@/store/app-store'
-import { Bookmark, Target } from 'lucide-react'
+import { Bookmark, Target, Rows3 } from 'lucide-react'
 
 export default function Sidebar() {
   const activeNav = useAppStore(s => s.activeNav)
   const setActiveNav = useAppStore(s => s.setActiveNav)
   const savedPostIds = useAppStore(s => s.savedPostIds)
+  const viewMode = useAppStore(s => s.viewMode)
+  const setViewMode = useAppStore(s => s.setViewMode)
 
   return (
     <aside style={{
@@ -76,6 +78,28 @@ export default function Sidebar() {
           strokeWidth={2}
           color={activeNav === 'copyable' ? '#111' : '#aaa'}
         />
+      </button>
+
+      {/* Feed / Grid toggle */}
+      <button
+        onClick={() => setViewMode(viewMode === 'feed' ? 'grid' : 'feed')}
+        title={viewMode === 'feed' ? 'Switch to grid' : 'Switch to feed'}
+        style={{
+          width: 44,
+          height: 44,
+          borderRadius: 12,
+          background: viewMode === 'feed' ? '#f0f0f0' : 'transparent',
+          border: 'none',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          transition: 'background 0.15s',
+        }}
+        onMouseEnter={e => { if (viewMode !== 'feed') (e.currentTarget as HTMLButtonElement).style.background = '#f5f5f5' }}
+        onMouseLeave={e => { if (viewMode !== 'feed') (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
+      >
+        <Rows3 size={18} strokeWidth={2} color={viewMode === 'feed' ? '#111' : '#aaa'} />
       </button>
 
       {/* Saved Posts */}

@@ -157,4 +157,7 @@ export interface AppState {
 
   activeNav: string
   setActiveNav: (nav: string) => void
+
+  viewMode: 'grid' | 'feed'
+  setViewMode: (mode: 'grid' | 'feed') => void
 }

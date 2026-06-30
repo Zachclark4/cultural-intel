@@ -7,7 +7,6 @@ import { Post } from '@/lib/types'
 import PostCard from './PostCard'
 import VerticalFeed from './VerticalFeed'
 import FilterBar from '@/components/layout/FilterBar'
-import { LayoutGrid, Rows3 } from 'lucide-react'
 
 const BATCH_SIZE = 100
 
@@ -21,7 +20,7 @@ const NAV_META: Record<string, { title: string; desc: string }> = {
 }
 
 export default function FeedGrid() {
-  const [viewMode, setViewMode] = useState<'grid' | 'feed'>('grid')
+  const viewMode = useAppStore(s => s.viewMode)
   const filters = useAppStore(s => s.filters)
   const importedPosts = useAppStore(s => s.importedPosts)
   const setLivePostCount = useAppStore(s => s.setLivePostCount)
@@ -166,29 +165,7 @@ export default function FeedGrid() {
 
   return (
     <div style={{ display: 'flex', flex: 1, flexDirection: 'column', overflow: 'hidden', minHeight: 0 }}>
-      {!isSavedView && (
-        <div style={{ display: 'flex', alignItems: 'center' }}>
-          <div style={{ flex: 1 }}>
-            <FilterBar postCount={loading ? 0 : posts.length} onRefresh={loadPosts} refreshing={loading} />
-          </div>
-          <div style={{ display: 'flex', gap: 2, padding: '0 12px', flexShrink: 0 }}>
-            <button
-              onClick={() => setViewMode('grid')}
-              title="Grid view"
-              style={{ width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', borderRadius: 6, cursor: 'pointer', background: viewMode === 'grid' ? 'rgba(0,0,0,0.08)' : 'transparent' }}
-            >
-              <LayoutGrid size={15} color={viewMode === 'grid' ? '#0a0a0a' : '#aaa'} />
-            </button>
-            <button
-              onClick={() => setViewMode('feed')}
-              title="Feed view"
-              style={{ width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', borderRadius: 6, cursor: 'pointer', background: viewMode === 'feed' ? 'rgba(0,0,0,0.08)' : 'transparent' }}
-            >
-              <Rows3 size={15} color={viewMode === 'feed' ? '#0a0a0a' : '#aaa'} />
-            </button>
-          </div>
-        </div>
-      )}
+      {!isSavedView && <FilterBar postCount={loading ? 0 : posts.length} onRefresh={loadPosts} refreshing={loading} />}
 
       {/* Nav view header — shown for non-feed, non-boards nav items */}
       {navMeta && (
