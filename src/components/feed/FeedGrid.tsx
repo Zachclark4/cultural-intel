@@ -5,7 +5,9 @@ import { useAppStore } from '@/store/app-store'
 import { filterPosts } from '@/lib/filters'
 import { Post } from '@/lib/types'
 import PostCard from './PostCard'
+import VerticalFeed from './VerticalFeed'
 import FilterBar from '@/components/layout/FilterBar'
+import { LayoutGrid, Rows3 } from 'lucide-react'
 
 const BATCH_SIZE = 100
 
@@ -19,6 +21,7 @@ const NAV_META: Record<string, { title: string; desc: string }> = {
 }
 
 export default function FeedGrid() {
+  const [viewMode, setViewMode] = useState<'grid' | 'feed'>('grid')
   const filters = useAppStore(s => s.filters)
   const importedPosts = useAppStore(s => s.importedPosts)
   const setLivePostCount = useAppStore(s => s.setLivePostCount)
@@ -163,7 +166,29 @@ export default function FeedGrid() {
 
   return (
     <div style={{ display: 'flex', flex: 1, flexDirection: 'column', overflow: 'hidden', minHeight: 0 }}>
-      {!isSavedView && <FilterBar postCount={loading ? 0 : posts.length} onRefresh={loadPosts} refreshing={loading} />}
+      {!isSavedView && (
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <div style={{ flex: 1 }}>
+            <FilterBar postCount={loading ? 0 : posts.length} onRefresh={loadPosts} refreshing={loading} />
+          </div>
+          <div style={{ display: 'flex', gap: 2, padding: '0 12px', flexShrink: 0 }}>
+            <button
+              onClick={() => setViewMode('grid')}
+              title="Grid view"
+              style={{ width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', borderRadius: 6, cursor: 'pointer', background: viewMode === 'grid' ? 'rgba(0,0,0,0.08)' : 'transparent' }}
+            >
+              <LayoutGrid size={15} color={viewMode === 'grid' ? '#0a0a0a' : '#aaa'} />
+            </button>
+            <button
+              onClick={() => setViewMode('feed')}
+              title="Feed view"
+              style={{ width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', borderRadius: 6, cursor: 'pointer', background: viewMode === 'feed' ? 'rgba(0,0,0,0.08)' : 'transparent' }}
+            >
+              <Rows3 size={15} color={viewMode === 'feed' ? '#0a0a0a' : '#aaa'} />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Nav view header — shown for non-feed, non-boards nav items */}
       {navMeta && (
@@ -191,28 +216,30 @@ export default function FeedGrid() {
         </div>
       )}
 
-      <div ref={scrollContainerRef} style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
-        {!isSavedView && loading ? (
-          <LoadingSkeleton />
-        ) : !isSavedView && error ? (
-          <ErrorState message={error} />
-        ) : posts.length === 0 ? (
-          isSavedView ? <SavedEmptyState /> : <EmptyState />
-        ) : (
-          <>
-            <div className="video-grid">
-              {visiblePosts.map((post, i) => (
-                <PostCard key={post.id} post={post} index={i} />
-              ))}
+      {!isSavedView && loading ? (
+        <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}><LoadingSkeleton /></div>
+      ) : !isSavedView && error ? (
+        <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}><ErrorState message={error} /></div>
+      ) : posts.length === 0 ? (
+        <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
+          {isSavedView ? <SavedEmptyState /> : <EmptyState />}
+        </div>
+      ) : !isSavedView && viewMode === 'feed' ? (
+        <VerticalFeed posts={posts} />
+      ) : (
+        <div ref={scrollContainerRef} style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
+          <div className="video-grid">
+            {visiblePosts.map((post, i) => (
+              <PostCard key={post.id} post={post} index={i} />
+            ))}
+          </div>
+          {renderedCount < posts.length && (
+            <div ref={sentinelRef} style={{ height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span style={{ fontSize: 12, color: '#ccc' }}>{renderedCount} of {posts.length}</span>
             </div>
-            {renderedCount < posts.length && (
-              <div ref={sentinelRef} style={{ height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <span style={{ fontSize: 12, color: '#ccc' }}>{renderedCount} of {posts.length}</span>
-              </div>
-            )}
-          </>
-        )}
-      </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
