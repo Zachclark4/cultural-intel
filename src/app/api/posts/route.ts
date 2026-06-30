@@ -36,16 +36,14 @@ async function fetchFromSupabase(): Promise<Post[] | null> {
     .from('posts')
     .select(`${BASE_SELECT}, format_summary, artist_adaptation, discovery_source`)
     .gte('posted_at', cutoff)
-    .order('posted_at', { ascending: false })
-    .limit(2000)
+    .limit(5000)
 
   if (result.error) {
     result = await db
       .from('posts')
       .select(BASE_SELECT)
       .gte('posted_at', cutoff)
-      .order('posted_at', { ascending: false })
-      .limit(2000)
+      .limit(5000)
   }
 
   const { data, error } = result
