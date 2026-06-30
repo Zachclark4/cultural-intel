@@ -61,8 +61,8 @@ export default function PostCard({ post, index = 0 }: { post: Post; index?: numb
         transition: 'box-shadow 0.2s',
       }}
     >
-      {/* ── Thumbnail (16:9) ── */}
-      <div style={{ position: 'relative', aspectRatio: '16/9', overflow: 'hidden' }}>
+      {/* ── Thumbnail (9:16 portrait) ── */}
+      <div style={{ position: 'relative', aspectRatio: '9/16', overflow: 'hidden' }}>
 
         {post.thumbnailUrl && !imgError ? (
           <motion.img
@@ -77,7 +77,7 @@ export default function PostCard({ post, index = 0 }: { post: Post; index?: numb
             transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
             style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', transformOrigin: 'center',
               // TikTok thumbnails are portrait — anchor to top so faces aren't cropped out
-              objectPosition: post.platform === 'tiktok' ? 'top center' : 'center',
+              objectPosition: 'center',
             }}
           />
         ) : (
