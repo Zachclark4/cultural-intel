@@ -8,7 +8,7 @@ import { DEFAULT_BOARDS } from '@/lib/constants'
 const DEFAULT_FILTERS: Filters = {
   platforms: [],
   maxFollowers: null,
-  minViews: 1000,
+  minViews: 0,
   minExplosionScore: 0,
   niches: [],
   formatTypes: [],
